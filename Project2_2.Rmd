@@ -1,0 +1,59 @@
+---
+title: "Project 2"
+author: "Ka Man Chan"
+date: "October 7, 2016"
+output: html_document
+---
+
+## Introduction
+### Data from Yifei Li from Introduction to R (2013)
+### Analysis: The corelation between religious groups and income distribution
+
+```{r Project2}
+
+list.of.packages <- c("RMySQL", "ggplot2","plotly","tidyr","dplyr")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+library(RMySQL)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(plotly)
+
+mydb = dbConnect(MySQL(), user='user1', password='Password1234', dbname='sys', host='localhost')
+rs3 = dbSendQuery(mydb, "select * from Religion")
+ReligionData = fetch(rs3, n=-1)
+
+#################################################################################################
+
+Result1=ReligionData %>%
+        gather(Salary_Range, Frequency, 2:10)
+Result1
+
+plot_ly(data = Result1, x = ~Result1$Salary_Range, y = ~Result1$Frequency, color = ~Result1$Religion)
+
+Result2 =ReligionData %>%
+        gather(Salary_Range, Frequency, 2:10) %>%   # this turns our wide data to a long format
+        group_by(Salary_Range) %>%                  # I want to summarize data at the Salary Range level
+        summarise(Frequency = max(Frequency)) %>%   # Sum the Frquency
+        arrange(desc(Salary_Range))                 # order by Salary Range in descending order
+
+# Plot the distribution of Catholic believer in each salary range
+ggplot(Result2, aes(x=Result2$Salary_Range,y=Result2$Frequency)) + geom_point(shape=19)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(title = "The distribution of Catholic believer in each salary range") + labs(x = "Salary Range", y="Frequency")
+
+Result3 =ReligionData %>%
+        gather(Salary_Range, Frequency, 2:10) %>%   # this turns our wide data to a long format
+        group_by(Salary_Range) %>%                     # I want to summarize data at the Airline level
+        summarise(Frequency = min(Frequency)) %>%       # Sum the Frquency
+        arrange(desc(Salary_Range))                    # order by airline in descending order
+
+# Find the religion that has highest salary in each range
+dplyr::inner_join(Result1,Result2, by = c("Frequency" , "Salary_Range") )
+# Find the religion that has lowest salary in each range
+dplyr::inner_join(Result1,Result3, by = c("Frequency" , "Salary_Range") )
+
+## Summary
+### Catholics believer have the highest Salary in each Salary Range  
+### Buddhist believer have the lowest Salary in each Salary Range except <$10k that Atheist has the lowest salary
+```

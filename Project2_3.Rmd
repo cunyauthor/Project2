@@ -1,0 +1,200 @@
+---
+title: "Project 2"
+author: "Ka Man Chan"
+date: "October 7, 2016"
+output: html_document
+---
+
+## Introduction
+### Data from Sharon Morris, from NYC Citibike data
+### Analysis: Calculate the average time each bike is used
+ 
+```{r Project2}
+ 
+list.of.packages <- c("RMySQL", "ggplot2","plotly","tidyr","dplyr")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+library(RMySQL)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(plotly)
+
+ 
+#Connect to the MySQL database
+mydb = dbConnect(MySQL(), user='user1', password='Password1234', dbname='sys', host='localhost')
+rs1 = dbSendQuery(mydb, "select * from CitiBike where not 'birth year' is null")
+CitiBikeData = fetch(rs1, n=-1)
+
+#################################################################################################
+# Criteria:
+# Male, averge minutes group by birth year ,Gender (Zero=unknown; 1=male; 2=female)
+
+Result1=dplyr::select(CitiBikeData, one_of(c("usertype", "birth year","gender", "starttime", "stoptime")))
+Result2=dplyr::filter(Result1, gender=="1\r")
+Result3=tidyr::separate(Result2, starttime, c("startDate","starttime"), sep = " ")
+Result4=tidyr::separate(Result3, stoptime, c("stopDate","stoptime"), sep = " ")
+Result5=dplyr::mutate(Result4, Duration = as.character(
+  round(difftime(strptime(stoptime, "%H:%M:%S"),strptime(starttime, "%H:%M:%S"),units = c("mins")),digits=2))
+)
+Result6 =dplyr::select(Result5, one_of('birth year', 'Duration'))
+Result7= dplyr::group_by(Result6, `birth year`) 
+Result8= dplyr::summarise(Result7, mean(as.double(Duration))) 
+Result9=dplyr::rename(Result8,Average_Min=`mean(as.double(Duration))`)
+Result9
+ggplot(Result9, aes(x=Result9$`birth year`,y=Result9$Average_Min)) + geom_point(shape=1)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(title = "Birth Year and Average Minute of Male in June 2016") + labs(x = "Birth Year", y="Average Minutes")
+
+# Summary
+# Average Minute to ride the Citi Bike (Male only) by Birth Year 
+
+#################################################################################################
+# Criteria:
+# Female, averge minutes group by birth year ,Gender (Zero=unknown; 1=male; 2=female)
+
+Result1=dplyr::select(CitiBikeData, one_of(c("usertype", "birth year","gender", "starttime", "stoptime")))
+Result2=dplyr::filter(Result1, gender=="2\r")
+Result3=tidyr::separate(Result2, starttime, c("startDate","starttime"), sep = " ")
+Result4=tidyr::separate(Result3, stoptime, c("stopDate","stoptime"), sep = " ")
+Result5=dplyr::mutate(Result4, Duration = as.character(
+  round(difftime(strptime(stoptime, "%H:%M:%S"),strptime(starttime, "%H:%M:%S"),units = c("mins")),digits=2))
+)
+Result6 =dplyr::select(Result5, one_of('birth year', 'Duration'))
+Result7= dplyr::group_by(Result6, `birth year`) 
+Result8= dplyr::summarise(Result7, mean(as.double(Duration))) 
+Result9=dplyr::rename(Result8,Average_Min=`mean(as.double(Duration))`)
+Result9
+
+ggplot(Result9, aes(x=Result9$`birth year`,y=Result9$Average_Min)) + geom_point(shape=1)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(title = "Birth Year and Average Minute of Female in June 2016") + labs(x = "Birth Year", y="Average Minutes")
+
+
+# Summary
+# Average Minute to ride the Citi Bike (Female only) by Birth Year
+
+#################################################################################################
+# Criteria:
+# Male+Female, averge minutes group by birth year ,Gender (Zero=unknown; 1=male; 2=female)
+
+Result1=dplyr::select(CitiBikeData, one_of(c("usertype", "birth year","gender", "starttime", "stoptime")))
+Result2=dplyr::filter(Result1, gender==c("1\r","2\r"))
+Result3=tidyr::separate(Result2, starttime, c("startDate","starttime"), sep = " ")
+Result4=tidyr::separate(Result3, stoptime, c("stopDate","stoptime"), sep = " ")
+Result5=dplyr::mutate(Result4, Duration = as.character(
+  round(difftime(strptime(stoptime, "%H:%M:%S"),strptime(starttime, "%H:%M:%S"),units = c("mins")),digits=2))
+)
+Result6 =dplyr::select(Result5, one_of('birth year', 'Duration'))
+Result7= dplyr::group_by(Result6, `birth year`) 
+Result8= dplyr::summarise(Result7, mean(as.double(Duration))) 
+Result9=dplyr::rename(Result8,Average_Min=`mean(as.double(Duration))`)
+Result9
+ggplot(Result9, aes(x=Result9$`birth year`,y=Result9$Average_Min)) + geom_point(shape=1)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(title = "Birth Year and Average Minute of (Male & Female) in June 2016") + labs(x = "Birth Year", y="Average Minutes")
+
+# Summary
+# Average Minute to ride the Citi Bike (Male and Female) by Birth Year
+
+#################################################################################################
+# Criteria:
+# Male+Female+unknown, averge minutes group by usertype 
+# (Customer = 24-hour pass or 7-day pass user; Subscriber = Annual Member)
+# Gender (Zero=unknown; 1=male; 2=female)
+
+Result1=dplyr::select(CitiBikeData, one_of(c("usertype", "birth year","gender", "starttime", "stoptime")))
+Result2=dplyr::filter(Result1,  gender==c("1\r","2\r","0\r"))
+Result3=tidyr::separate(Result2, starttime, c("startDate","starttime"), sep = " ")
+Result4=tidyr::separate(Result3, stoptime, c("stopDate","stoptime"), sep = " ")
+Result5=dplyr::mutate(Result4, Duration = as.character(
+  round(difftime(strptime(stoptime, "%H:%M:%S"),strptime(starttime, "%H:%M:%S"),units = c("mins")),digits=2))
+)
+Result6 =dplyr::select(Result5, one_of('usertype', 'Duration'))
+Result7= dplyr::group_by(Result6, usertype) 
+Result8= dplyr::summarise(Result7, mean(as.double(Duration))) 
+Result9=dplyr::rename(Result8,Average_Min=`mean(as.double(Duration))`)
+Result9
+ggplot(Result9, aes(x=Result9$usertype,y=Result9$Average_Min)) + geom_point(shape=1)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(title = "User Type and Average Minute in June 2016") + labs(x = "User Type", y="Average Minutes")
+
+# Summary
+# Average Minute to ride the Citi Bike (Male and Female) by User Type 
+# (Customer = 24-hour pass or 7-day pass user; Subscriber = Annual Member) 
+# Customer    21.04384
+# Subscriber    11.33207
+
+#################################################################################################
+# Criteria:
+# Male+Female, averge minutes ,Gender (Zero=unknown; 1=male; 2=female)
+
+Result1=dplyr::select(CitiBikeData, one_of(c("usertype", "birth year","gender", "starttime", "stoptime")))
+Result2=dplyr::filter(Result1,  gender==c("1\r","2\r"))
+Result3=tidyr::separate(Result2, starttime, c("startDate","starttime"), sep = " ")
+Result4=tidyr::separate(Result3, stoptime, c("stopDate","stoptime"), sep = " ")
+Result5=dplyr::mutate(Result4, Duration = as.character(
+  round(difftime(strptime(stoptime, "%H:%M:%S"),strptime(starttime, "%H:%M:%S"),units = c("mins")),digits=2))
+)
+Result6=dplyr::select(Result5, one_of('usertype', 'Duration'))
+Result7=dplyr::summarise(Result6, mean(as.double(Duration))) 
+Result8=dplyr::rename(Result7,Average_Min=`mean(as.double(Duration))`)
+Result8
+
+# Summary
+# Average Minute to ride the Citi Bike (Male and Female)
+# 10.48591 minutes
+
+#################################################################################################
+# Criteria:
+# Most Frequently Used Start Station Name
+
+Result1=dplyr::select(CitiBikeData, one_of(c("start station name", "end station name")))
+Result2=dplyr::filter(Result1,  `start station name`!=c("start station name"))
+Result3= dplyr::count(Result2,`start station name`)
+Result4=dplyr::arrange(Result3,desc(n))
+Result5=dplyr::top_n(Result4,1,n)
+Result5
+
+# Summary
+# Most Frequently Used Start Station Name
+# Pershing Square North 
+
+#################################################################################################
+# Criteria:
+# Least Frequently Used Start Station Name
+
+Result1=dplyr::select(CitiBikeData, one_of(c("start station name", "end station name")))
+Result2= dplyr::count(Result1,`start station name`)
+Result3=dplyr::filter(Result2,  `start station name`!=c("start station name"))
+Result4=dplyr::arrange(Result3,n)
+Result5=dplyr::top_n(Result4,-1,n)
+Result5
+
+# Summary
+# Least Frequently Used Start Station Name
+# Albany Ave & Fulton St & Railroad Ave & Kay Ave 
+
+#################################################################################################
+# Criteria:
+# Most Frequently use End Station Name
+
+Result1=dplyr::select(CitiBikeData, one_of(c("start station name", "end station name")))
+Result2=dplyr::filter(Result1,  `end station name`!=c("end station name"))
+Result3= dplyr::count(Result2,`end station name`)
+Result4=dplyr::arrange(Result3,desc(n))
+Result5=dplyr::top_n(Result4,1,n)
+Result5
+
+# Summary
+# Most Frequently use End Station Name
+# Pershing Square North
+
+#################################################################################################
+# Criteria:
+# Least Frequently use End Station Name
+
+Result1=dplyr::select(CitiBikeData, one_of(c("start station name", "end station name")))
+Result2= dplyr::count(Result1,`end station name`)
+Result3=dplyr::filter(Result2,  `end station name`!=c("end station name"))
+Result4=dplyr::arrange(Result3,n)
+Result5=dplyr::top_n(Result4,-1,n)
+Result5
+
+# Summary
+# Least Frequently use End Station Name
+# NYCBS Depot - FAR & Paulus Hook
+```

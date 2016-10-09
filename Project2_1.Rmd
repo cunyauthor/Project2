@@ -1,0 +1,61 @@
+---
+title: "Project 2"
+author: "Ka Man Chan"
+date: "October 7, 2016"
+output: html_document
+---
+## Introduction
+### Data from Jose Zuniga from Rob Gravelle, Database Journal 2010
+### Analysis: Compare monthly citizenship for the given regions
+
+```{r Project2}
+ 
+list.of.packages <- c("RMySQL", "ggplot2","plotly","tidyr","dplyr")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+library(RMySQL)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(plotly)
+
+mydb = dbConnect(MySQL(), user='user1', password='Password1234', dbname='sys', host='localhost')
+rs2 = dbSendQuery(mydb, "select month, region1,region2,region3,region4,region5 from Citizenship where Month<>'Total'")
+CitizenshipData = fetch(rs2, n=-1)
+
+CitizenshipData
+
+Result1=CitizenshipData %>%
+        gather(Region, Frequency, 2:6) 
+Result1
+
+# Visualize the comparsion of Citizenship in different region on each month
+plot_ly(data = Result1, x = ~Result1$month, y = ~Result1$Frequency, color = ~Result1$Region)
+
+Result2 =CitizenshipData %>%
+        gather(Region, Frequency, 2:6) %>%
+        group_by(month) %>%                     # I want to summarize data at the Airline level
+        summarise(Frequency = max(Frequency)) %>%       # Sum the Frquency
+        arrange(desc(month))                    # order by airline in descending order
+Result2
+
+# Plot Max number of Citizenship in each month
+ggplot(Result2, aes(x=Result2$month,y=Result2$Frequency)) + geom_point(shape=19)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(title = "Max # of Citizenship in each month") + labs(x = "Month", y="Frequency")
+
+Result3 =CitizenshipData %>%
+        gather(Region, Frequency, 2:6) %>%  
+        group_by(month) %>%                     # I want to summarize data at the Airline level
+        summarise(Frequency = min(Frequency)) %>%       # Sum the Frquency
+        arrange(desc(month))                    # order by airline in descending order
+Result3
+
+# Find the Region that has highest citizenship in each month
+dplyr::inner_join(Result1,Result2, by = c("Frequency" , "month") )
+# Find the Region that has lowest citizenship in each month
+dplyr::inner_join(Result1,Result3, by = c("Frequency" , "month") )
+
+#Summary
+#Region 3 has the highest # of citizenship every month
+#Region 4 has the lowest # of citizenship every month except Nov (Region 1,4) and Dec (Region1) has the lowest # of citizenship
+```
